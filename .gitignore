@@ -1,0 +1,10 @@
+# Ignore local datasets and database files
+data/
+database/
+*.db
+*.sqlite
+*.sqlite3
+*.zip
+*.bin
+*.tar.gz
+.DS_Store
