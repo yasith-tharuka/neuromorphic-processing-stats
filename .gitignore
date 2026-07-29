@@ -8,3 +8,4 @@ database/
 *.bin
 *.tar.gz
 .DS_Store
+.Rproj.user

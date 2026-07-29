@@ -53,7 +53,7 @@ hist(nmnist_data$latency_us,
      breaks = 20)
 
 # Histogram 2: Spatial Footprint
-hist(nmnist_data$bounding_area, 
+# hist(nmnist_data$bounding_area, 
      main = "Distribution of Active Spatial Area", 
      xlab = "Bounding Box Area (pixels squared)", 
      col = "darkorange", 
