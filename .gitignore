@@ -1,4 +1,4 @@
-# Ignore local datasets and database files
+# Ignore raw dataset files
 data/
 database/
 *.db
@@ -7,5 +7,12 @@ database/
 *.zip
 *.bin
 *.tar.gz
+
+# System files
 .DS_Store
+
+# R session files
 .Rproj.user
+.RData
+.Rhistory
+Rplots.pdf

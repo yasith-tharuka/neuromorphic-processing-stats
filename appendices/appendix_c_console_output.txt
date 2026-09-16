@@ -1,0 +1,174 @@
+=== Sub-RQ1: One-Sample t-test on Latency ===
+
+	One Sample t-test
+
+data:  nmnist_data$latency_us
+t = 0.312, df = 299, p-value = 0.7553
+alternative hypothesis: true mean is not equal to 306000
+95 percent confidence interval:
+ 305716.8 306389.9
+sample estimates:
+mean of x 
+ 306053.3 
+
+Standard Deviation: 2961.672 
+
+=== Sub-RQ2: Chi-Square Test of Independence ===
+   
+    High Low
+  0   30   0
+  1    0  30
+  2   19  11
+  3   22   8
+  4    7  23
+  5   18  12
+  6   16  14
+  7    6  24
+  8   24   6
+  9    8  22
+
+	Pearson's Chi-squared test with simulated p-value (based on 10000
+	replicates)
+
+data:  tab_rq2
+X-squared = 106.67, df = NA, p-value = 9.999e-05
+
+Sub-RQ2 Cramér's V: 0.5963 
+
+=== Sub-RQ3: 2x2 Chi-Square Test ===
+       
+        Fast Slow
+  Large   72   78
+  Small   78   72
+
+	Pearson's Chi-squared test with Yates' continuity correction
+
+data:  tab_rq3
+X-squared = 0.33333, df = 1, p-value = 0.5637
+
+Sub-RQ3 Cramér's V: 0.04 
+--- Sub-RQ3 Robustness Check: Bounded Area vs Latency ---
+
+	Pearson's product-moment correlation
+
+data:  nmnist_data$bounding_area and nmnist_data$latency_us
+t = 0.11593, df = 298, p-value = 0.9078
+alternative hypothesis: true correlation is not equal to 0
+95 percent confidence interval:
+ -0.1066067  0.1198649
+sample estimates:
+        cor 
+0.006715213 
+
+
+=== Sub-RQ4: Welch Two-Sample t-test ===
+
+	Welch Two Sample t-test
+
+data:  nmnist_data$spike_count by nmnist_data$polarity_majority
+t = 19.255, df = 173.1, p-value < 2.2e-16
+alternative hypothesis: true difference in means between group OFF-dominant and group ON-dominant is not equal to 0
+95 percent confidence interval:
+ 1635.065 2008.555
+sample estimates:
+mean in group OFF-dominant  mean in group ON-dominant 
+                   4693.56                    2871.75 
+
+OFF-dominant SD: 811.6534 
+ON-dominant SD : 704.0992 
+Sub-RQ4 Cohen's d: 2.3262 
+
+=== Sub-RQ5: One-Way ANOVA ===
+                    Df Sum Sq Mean Sq F value Pr(>F)    
+digit_class_factor   9 761935   84659   45.35 <2e-16 ***
+Residuals          290 541412    1867                   
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+Sub-RQ5 Eta-squared (eta^2): 0.5846 
+
+--- Sub-RQ5: Levene's Test ---
+Levene's Test for Homogeneity of Variance (center = median)
+       Df F value  Pr(>F)   
+group   9  3.0647 0.00159 **
+      290                   
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+--- Sub-RQ5 Robustness Check: Welch's ANOVA ---
+
+	One-way analysis of means (not assuming equal variances)
+
+data:  active_pixels and digit_class_factor
+F = 68.155, num df = 9.00, denom df = 117.92, p-value < 2.2e-16
+
+
+--- Sub-RQ5: Full Tukey HSD Post-Hoc Test ---
+  Tukey multiple comparisons of means
+    95% family-wise confidence level
+
+Fit: aov(formula = active_pixels ~ digit_class_factor, data = nmnist_data)
+
+$digit_class_factor
+           diff          lwr         upr     p adj
+1-0 -192.333333 -227.9057667 -156.760900 0.0000000
+2-0  -34.133333  -69.7057667    1.439100 0.0721751
+3-0  -28.533333  -64.1057667    7.039100 0.2429824
+4-0  -92.333333 -127.9057667  -56.760900 0.0000000
+5-0  -53.400000  -88.9724333  -17.827567 0.0001165
+6-0  -56.966667  -92.5391000  -21.394233 0.0000261
+7-0  -99.800000 -135.3724333  -64.227567 0.0000000
+8-0  -54.633333  -90.2057667  -19.060900 0.0000701
+9-0  -91.433333 -127.0057667  -55.860900 0.0000000
+2-1  158.200000  122.6275667  193.772433 0.0000000
+3-1  163.800000  128.2275667  199.372433 0.0000000
+4-1  100.000000   64.4275667  135.572433 0.0000000
+5-1  138.933333  103.3609000  174.505767 0.0000000
+6-1  135.366667   99.7942333  170.939100 0.0000000
+7-1   92.533333   56.9609000  128.105767 0.0000000
+8-1  137.700000  102.1275667  173.272433 0.0000000
+9-1  100.900000   65.3275667  136.472433 0.0000000
+3-2    5.600000  -29.9724333   41.172433 0.9999690
+4-2  -58.200000  -93.7724333  -22.627567 0.0000153
+5-2  -19.266667  -54.8391000   16.305767 0.7792961
+6-2  -22.833333  -58.4057667   12.739100 0.5667567
+7-2  -65.666667 -101.2391000  -30.094233 0.0000005
+8-2  -20.500000  -56.0724333   15.072433 0.7107243
+9-2  -57.300000  -92.8724333  -21.727567 0.0000226
+4-3  -63.800000  -99.3724333  -28.227567 0.0000012
+5-3  -24.866667  -60.4391000   10.705767 0.4394074
+6-3  -28.433333  -64.0057667    7.139100 0.2474883
+7-3  -71.266667 -106.8391000  -35.694233 0.0000000
+8-3  -26.100000  -61.6724333    9.472433 0.3668924
+9-3  -62.900000  -98.4724333  -27.327567 0.0000018
+5-4   38.933333    3.3609000   74.505767 0.0195883
+6-4   35.366667   -0.2057667   70.939100 0.0527627
+7-4   -7.466667  -43.0391000   28.105767 0.9996540
+8-4   37.700000    2.1275667   73.272433 0.0279770
+9-4    0.900000  -34.6724333   36.472433 1.0000000
+6-5   -3.566667  -39.1391000   32.005767 0.9999994
+7-5  -46.400000  -81.9724333  -10.827567 0.0017039
+8-5   -1.233333  -36.8057667   34.339100 1.0000000
+9-5  -38.033333  -73.6057667   -2.460900 0.0254432
+7-6  -42.833333  -78.4057667   -7.260900 0.0057992
+8-6    2.333333  -33.2391000   37.905767 1.0000000
+9-6  -34.466667  -70.0391000    1.105767 0.0664182
+8-7   45.166667    9.5942333   80.739100 0.0026325
+9-7    8.366667  -27.2057667   43.939100 0.9991301
+9-8  -36.800000  -72.3724333   -1.227567 0.0359597
+
+
+=== Sub-RQ6: Pearson Bivariate Correlation Matrix ===
+                 spike_count bounding_area mean_isi_us latency_us active_pixels
+spike_count            1.000         0.121      -0.926      0.051         0.931
+bounding_area          0.121         1.000      -0.126      0.007         0.137
+mean_isi_us           -0.926        -0.126       1.000     -0.015        -0.866
+latency_us             0.051         0.007      -0.015      1.000         0.048
+active_pixels          0.931         0.137      -0.866      0.048         1.000
+spikes_per_pixel       0.925         0.093      -0.912      0.044         0.736
+                 spikes_per_pixel
+spike_count                 0.925
+bounding_area               0.093
+mean_isi_us                -0.912
+latency_us                  0.044
+active_pixels               0.736
+spikes_per_pixel            1.000

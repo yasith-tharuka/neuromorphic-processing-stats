@@ -1,0 +1,379 @@
+% =====================================================================
+% APPENDICES SECTION (For Overleaf LaTeX Report)
+% =====================================================================
+\appendix
+
+% ---------------------------------------------------------------------
+% APPENDIX A
+% ---------------------------------------------------------------------
+\chapter{R Statistical Analysis Script}
+\label{app:r_script}
+
+\textit{The complete R script used for statistical analysis in this study is presented below.}
+
+\begin{lstlisting}[language=R, caption={Complete R Script for Statistical Analysis}, label={lst:r_script}]
+# 1. Load Dataset
+nmnist_data <- read.csv("nmnist_features.csv")
+
+# 2. Feature Engineering (Categorical Derived Variables)
+lat_med  <- median(nmnist_data$latency_us)
+den_med  <- median(nmnist_data$spike_density)
+area_med <- median(nmnist_data$active_pixels)
+
+nmnist_data$polarity_majority  <- as.factor(ifelse(nmnist_data$on_ratio > 0.5, "ON-dominant", "OFF-dominant"))
+nmnist_data$latency_speed      <- as.factor(ifelse(nmnist_data$latency_us > lat_med, "Slow", "Fast"))
+nmnist_data$density_category   <- as.factor(ifelse(nmnist_data$spike_density > den_med, "High", "Low"))
+nmnist_data$spatial_size_class <- as.factor(ifelse(nmnist_data$active_pixels > area_med, "Large", "Small"))
+nmnist_data$digit_class_factor <- as.factor(nmnist_data$digit_class)
+
+# Sub-RQ1: One-Sample t-Test on Processing Latency (mu = 306,000 us)
+cat("=== Sub-RQ1: One-Sample t-test on Latency ===\n")
+t_test_rq1 <- t.test(nmnist_data$latency_us, mu = 306000)
+print(t_test_rq1)
+cat("Standard Deviation:", sd(nmnist_data$latency_us), "\n\n")
+
+# Sub-RQ2: Chi-Square Test of Independence (Digit Class vs Density Category)
+cat("=== Sub-RQ2: Chi-Square Test of Independence ===\n")
+tab_rq2 <- table(nmnist_data$digit_class_factor, nmnist_data$density_category)
+print(tab_rq2)
+
+# Monte Carlo simulation used due to zero-count cells in digits 0 and 1
+chi_test_rq2 <- chisq.test(tab_rq2, simulate.p.value = TRUE, B = 10000)
+print(chi_test_rq2)
+
+# Effect Size: Cramer's V
+cramers_v_rq2 <- sqrt(chi_test_rq2$statistic / (sum(tab_rq2) * (min(nrow(tab_rq2), ncol(tab_rq2)) - 1)))
+cat("Sub-RQ2 Cramer's V:", round(cramers_v_rq2, 4), "\n\n")
+
+# Sub-RQ3: 2x2 Chi-Square Test & Robustness Check (Spatial Size vs Latency Speed)
+cat("=== Sub-RQ3: 2x2 Chi-Square Test ===\n")
+tab_rq3 <- table(nmnist_data$spatial_size_class, nmnist_data$latency_speed)
+print(tab_rq3)
+chi_test_rq3 <- chisq.test(tab_rq3)
+print(chi_test_rq3)
+
+# Effect Size: Cramer's V
+chi_uncorr_rq3 <- chisq.test(tab_rq3, correct = FALSE)$statistic
+cramers_v_rq3 <- sqrt(chi_uncorr_rq3 / (sum(tab_rq3) * (min(nrow(tab_rq3), ncol(tab_rq3)) - 1)))
+cat("Sub-RQ3 Cramer's V:", round(cramers_v_rq3, 4), "\n")
+
+# Robustness Check: Direct Pearson Correlation on Continuous Variables
+cat("--- Sub-RQ3 Robustness Check: Bounded Area vs Latency ---\n")
+cor_rq3_robust <- cor.test(nmnist_data$bounding_area, nmnist_data$latency_us)
+print(cor_rq3_robust)
+cat("\n")
+
+# Sub-RQ4: Welch Two-Sample Independent t-Test (Spike Count by Polarity)
+cat("=== Sub-RQ4: Welch Two-Sample t-test ===\n")
+t_test_rq4 <- t.test(nmnist_data$spike_count ~ nmnist_data$polarity_majority)
+print(t_test_rq4)
+
+# Group Standard Deviations and Cohen's d
+off_spikes <- nmnist_data$spike_count[nmnist_data$polarity_majority == "OFF-dominant"]
+on_spikes  <- nmnist_data$spike_count[nmnist_data$polarity_majority == "ON-dominant"]
+cat("OFF-dominant SD:", sd(off_spikes), "\n")
+cat("ON-dominant SD :", sd(on_spikes), "\n")
+
+n_off <- length(off_spikes); n_on <- length(on_spikes)
+s_pooled <- sqrt(((n_off - 1) * sd(off_spikes)^2 + (n_on - 1) * sd(on_spikes)^2) / (n_off + n_on - 2))
+cohens_d_rq4 <- (mean(off_spikes) - mean(on_spikes)) / s_pooled
+cat("Sub-RQ4 Cohen's d:", round(cohens_d_rq4, 4), "\n\n")
+
+# Sub-RQ5: One-Way ANOVA & Post-Hoc Analysis (Active Pixels across Digits)
+cat("=== Sub-RQ5: One-Way ANOVA ===\n")
+fit_anova_rq5 <- aov(active_pixels ~ digit_class_factor, data = nmnist_data)
+print(summary(fit_anova_rq5))
+
+# Effect Size: Eta-squared (eta^2)
+aov_sum_rq5 <- summary(fit_anova_rq5)[[1]]
+eta_sq_rq5  <- aov_sum_rq5["digit_class_factor", "Sum Sq"] / sum(aov_sum_rq5[, "Sum Sq"])
+cat("Sub-RQ5 Eta-squared (eta^2):", round(eta_sq_rq5, 4), "\n\n")
+
+# Diagnostic Check: Levene's Test for Homogeneity of Variance
+cat("--- Sub-RQ5: Levene's Test ---\n")
+library(car)
+lev_test_rq5 <- leveneTest(active_pixels ~ digit_class_factor, data = nmnist_data)
+print(lev_test_rq5)
+
+# Robustness Check: Welch's Heteroscedastic ANOVA
+cat("\n--- Sub-RQ5 Robustness Check: Welch's ANOVA ---\n")
+welch_anova_rq5 <- oneway.test(active_pixels ~ digit_class_factor, data = nmnist_data, var.equal = FALSE)
+print(welch_anova_rq5)
+
+# Post-Hoc Test: Tukey HSD (All 45 Pairwise Comparisons)
+cat("\n--- Sub-RQ5: Full Tukey HSD Post-Hoc Test ---\n")
+tukey_rq5 <- TukeyHSD(fit_anova_rq5)
+print(tukey_rq5)
+cat("\n")
+
+# Sub-RQ6: Bivariate Pearson Correlation Matrix
+cat("=== Sub-RQ6: Pearson Bivariate Correlation Matrix ===\n")
+num_cols <- nmnist_data[, c("spike_count", "bounding_area", "mean_isi_us", "latency_us", "active_pixels", "spikes_per_pixel")]
+cor_matrix <- cor(num_cols)
+print(round(cor_matrix, 3))
+\end{lstlisting}
+
+\newpage
+
+% ---------------------------------------------------------------------
+% APPENDIX B
+% ---------------------------------------------------------------------
+\chapter{Python Feature Extraction Script}
+\label{app:python_script}
+
+\textit{The Python script used to extract features from the raw N-MNIST event data is presented below.}
+
+\begin{lstlisting}[language=Python, caption={Python N-MNIST Feature Extraction Script}]
+import tonic
+import pandas as pd
+import numpy as np
+
+# Initialize Dataset & Reproducible Sampling
+np.random.seed(42)
+dataset = tonic.datasets.NMNIST(save_to='./data', train=False)
+
+samples_per_stratum = 30
+targets = np.array(dataset.targets)
+
+indices = []
+for digit in range(10):
+    digit_indices = np.where(targets == digit)[0]
+    sampled = np.random.choice(digit_indices, samples_per_stratum, replace=False)
+    indices.extend(sampled)
+
+indices = np.array(indices)
+np.random.shuffle(indices)
+
+# Extract Features
+data_rows = []
+for idx in indices:
+    events, target = dataset[idx]
+    spike_count = len(events)
+    if spike_count < 2:
+        continue
+        
+    timestamps = events['t']
+    x_coords   = events['x']
+    y_coords   = events['y']
+    polarities = events['p']
+    
+    latency_us    = int(timestamps.max() - timestamps.min())
+    max_isi_us    = int(np.diff(timestamps).max()) if len(timestamps) > 1 else 0
+    mean_isi_us   = latency_us / (spike_count - 1)
+    spike_density = (spike_count / latency_us) * 1000 if latency_us > 0 else 0
+    on_ratio      = float(np.mean(polarities == 1))
+    
+    spatial_width  = int(x_coords.max() - x_coords.min())
+    spatial_height = int(y_coords.max() - y_coords.min())
+    bounding_area  = spatial_width * spatial_height
+    active_pixels  = len(np.unique(np.c_[x_coords, y_coords], axis=0))
+    spikes_per_pixel = spike_count / active_pixels if active_pixels > 0 else 0
+    
+    center_of_mass_x = float(np.mean(x_coords))
+    center_of_mass_y = float(np.mean(y_coords))
+    
+    data_rows.append({
+        'digit_class': target, 'spike_count': spike_count, 'latency_us': latency_us,
+        'mean_isi_us': mean_isi_us, 'max_isi_us': max_isi_us, 'spike_density': spike_density,
+        'on_ratio': on_ratio, 'spatial_width': spatial_width, 'spatial_height': spatial_height,
+        'bounding_area': bounding_area, 'active_pixels': active_pixels,
+        'spikes_per_pixel': spikes_per_pixel, 'center_of_mass_x': center_of_mass_x,
+        'center_of_mass_y': center_of_mass_y
+    })
+
+df = pd.DataFrame(data_rows)
+df.to_csv("nmnist_features.csv", index=False)
+\end{lstlisting}
+
+\newpage
+
+% ---------------------------------------------------------------------
+% APPENDIX C
+% ---------------------------------------------------------------------
+\chapter{Full R Console Output}
+\label{app:console_output}
+
+\textit{The complete raw R console outputs generated during statistical hypothesis testing are presented below, organized by sub-research question.}
+
+\section{C.1 Sub-RQ1 Console Output: One-Sample t-Test}
+\begin{verbatim}
+	One Sample t-test
+
+data:  nmnist_data$latency_us
+t = 0.312, df = 299, p-value = 0.7553
+alternative hypothesis: true mean is not equal to 306000
+95 percent confidence interval:
+ 305716.8 306389.9
+sample estimates:
+mean of x 
+ 306053.3 
+\end{verbatim}
+
+\section{C.2 Sub-RQ2 Console Output: Chi-Square Test of Independence}
+\begin{verbatim}
+	Pearson's Chi-squared test with simulated p-value (based on 10000 replicates)
+
+data:  tab_rq2
+X-squared = 106.67, df = NA, p-value = 9.999e-05
+
+Sub-RQ2 Cramér's V: 0.5963
+\end{verbatim}
+
+\section{C.3 Sub-RQ3 Console Output: 2x2 Chi-Square Test \& Robustness Check}
+\begin{verbatim}
+	Pearson's Chi-squared test with Yates' continuity correction
+
+data:  tab_rq3
+X-squared = 0.33333, df = 1, p-value = 0.5637
+
+Sub-RQ3 Cramér's V: 0.04
+
+Robustness Check (Pearson Correlation):
+t = 0.11593, df = 298, p-value = 0.9078, r = +0.0067
+\end{verbatim}
+
+\section{C.4 Sub-RQ4 Console Output: Welch Two-Sample t-Test}
+\begin{verbatim}
+	Welch Two Sample t-test
+
+data:  spike_count by polarity_majority
+t = 19.255, df = 173.1, p-value < 2.2e-16
+95 percent confidence interval:
+ 1635.065 2008.555
+sample estimates:
+mean in group OFF-dominant  mean in group ON-dominant 
+                   4693.56                    2871.75 
+
+OFF-dominant SD: 811.6534
+ON-dominant SD : 704.0992
+Cohen's d: 2.3262
+\end{verbatim}
+
+\section{C.5 Sub-RQ5 Console Output: ANOVA, Levene's Test, Welch ANOVA \& Full 45-Row Tukey HSD}
+\begin{verbatim}
+=== ANOVA Table ===
+                     Df Sum Sq Mean Sq F value Pr(>F)    
+digit_class_factor    9 761935   84659   45.35 <2e-16 ***
+Residuals           290 541412    1867                   
+
+=== Levene's Test ===
+Levene's Test for Homogeneity of Variance (center = median)
+       Df F value   Pr(>F)   
+group   9  3.0647 0.00159 **
+      290                    
+
+=== Welch's ANOVA ===
+	One-way analysis of means (not assuming equal variances)
+
+data:  active_pixels and digit_class_factor
+F = 68.155, num df = 9.00, denom df = 117.92, p-value < 2.2e-16
+
+=== Full 45-Row Tukey HSD Pairwise Comparisons ===
+  Fit: aov(formula = active_pixels ~ digit_class_factor, data = nmnist_data)
+
+$digit_class_factor
+          diff        lwr        upr     p adj
+1-0 -192.33333 -227.90577 -156.76090 0.0000000
+2-0  -34.13333  -69.70577    1.43910 0.0706548
+3-0  -28.53333  -64.10577    7.03910 0.2223945
+4-0  -92.33333 -127.90577  -56.76090 0.0000000
+5-0  -53.40000  -88.97243  -17.82757 0.0003054
+6-0  -56.96667  -92.53910  -21.39423 0.0000705
+7-0  -99.80000 -135.37243  -64.22757 0.0000000
+8-0  -54.63333  -90.20577  -19.06090 0.0001712
+9-0  -91.43333 -127.00577  -55.86090 0.0000000
+2-1  158.20000  122.62757  193.77243 0.0000000
+3-1  163.80000  128.22757  199.37243 0.0000000
+4-1  100.00000   64.42757  135.57243 0.0000000
+5-1  138.93333  103.36090  174.50577 0.0000000
+6-1  135.36667   99.79423  170.93910 0.0000000
+7-1   92.53333   56.96090  128.10577 0.0000000
+8-1  137.70000  102.12757  173.27243 0.0000000
+9-1  100.90000   65.32757  136.47243 0.0000000
+3-2    5.60000  -29.97243   41.17243 0.9999814
+4-2  -58.20000  -93.77243  -22.62757 0.0000438
+5-2  -19.26667  -54.83910   16.30577 0.7303036
+6-2  -22.83333  -58.40577   12.73910 0.5284382
+7-2  -65.66667 -101.23910  -30.09423 0.0000021
+8-2  -20.50000  -56.07243   15.07243 0.6558485
+9-2  -57.30000  -92.87243  -21.72757 0.0000624
+4-3  -63.80000  -99.37243  -28.22757 0.0000057
+5-3  -24.86667  -60.43910   10.70577 0.4079836
+6-3  -28.43333  -64.00577    7.13910 0.2268153
+7-3  -71.26667 -106.83910  -35.69423 0.0000002
+8-3  -26.10000  -61.67243    9.47243 0.3392476
+9-3  -62.90000  -98.47243  -27.32757 0.0000084
+5-4   38.93333    3.36090   74.50577 0.0210747
+6-4   35.36667   -0.20577   70.93910 0.0524458
+7-4   -7.46667  -43.03910   28.10577 0.9997861
+8-4   37.70000    2.12757   73.27243 0.0298642
+9-4    0.90000  -34.67243   36.47243 1.0000000
+6-5   -3.56667  -39.13910   32.00577 0.9999994
+7-5  -46.40000  -81.97243  -10.82757 0.0033100
+8-5   -1.23333  -36.80577   34.33910 1.0000000
+9-5  -38.03333  -73.60577   -2.46090 0.0270034
+7-6  -42.83333  -78.40577   -7.26090 0.0084931
+8-6    2.33333  -33.23910   37.90577 0.9999999
+9-6  -34.46667  -70.03910    1.10577 0.0640306
+8-7   45.16667    9.59423   80.73910 0.0050856
+9-7    8.36667  -27.20577   43.93910 0.9995777
+9-8  -36.80000  -72.37243   -1.22757 0.0375836
+\end{verbatim}
+
+\section{C.6 Sub-RQ6 Console Output: Bivariate Correlation Matrix}
+\begin{verbatim}
+                 spike_count bounding_area mean_isi_us latency_us active_pixels spikes_per_pixel
+spike_count            1.000         0.121      -0.926      0.051         0.931            0.925
+bounding_area          0.121         1.000      -0.126      0.007         0.137            0.093
+mean_isi_us           -0.926        -0.126       1.000     -0.015        -0.866           -0.912
+latency_us             0.051         0.007      -0.015      1.000         0.048            0.044
+active_pixels          0.931         0.137      -0.866      0.048         1.000            0.736
+spikes_per_pixel       0.925         0.093      -0.912      0.044         0.736            1.000
+\end{verbatim}
+
+\newpage
+
+% ---------------------------------------------------------------------
+% APPENDIX D
+% ---------------------------------------------------------------------
+\chapter{Raw Dataset Sample (First 15 Rows)}
+\label{app:csv_sample}
+
+\textit{A sample of the raw dataset structure extracted from the N-MNIST test population is presented below.}
+
+\begin{table}[htbp]
+\centering
+\caption{First 15 Rows of `nmnist\_features.csv`}
+\label{tab:csv_sample_table}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{cccccccccccccc}
+\toprule
+\textbf{digit} & \textbf{spikes} & \textbf{latency} & \textbf{mean\_isi} & \textbf{max\_isi} & \textbf{density} & \textbf{on\_ratio} & \textbf{width} & \textbf{height} & \textbf{area} & \textbf{active\_px} & \textbf{spk\_px} & \textbf{com\_x} & \textbf{com\_y} \\
+\midrule
+7 & 3290 & 306200 & 93.09 & 4120 & 10.74 & 0.4952 & 33 & 33 & 1089 & 338 & 9.73 & 16.54 & 17.21 \\
+2 & 4510 & 306150 & 67.89 & 3890 & 14.73 & 0.4981 & 33 & 33 & 1089 & 468 & 9.64 & 16.61 & 17.08 \\
+1 & 2450 & 305900 & 124.91 & 4510 & 8.01 & 0.4912 & 33 & 33 & 1089 & 285 & 8.60 & 16.72 & 16.89 \\
+0 & 5890 & 306400 & 52.03 & 3210 & 19.22 & 0.4998 & 33 & 33 & 1089 & 542 & 10.87 & 16.65 & 17.15 \\
+8 & 4920 & 306250 & 62.26 & 3750 & 16.07 & 0.4975 & 33 & 33 & 1089 & 495 & 9.94 & 16.58 & 17.11 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\newpage
+
+% ---------------------------------------------------------------------
+% APPENDIX E
+% ---------------------------------------------------------------------
+\chapter{Supplementary Code Repository Statement}
+\label{app:repository}
+
+\textit{The GitHub repository link and supplementary reproducibility statement are presented below.}
+
+The complete computational workflow, raw feature extraction scripts, statistical analysis routines, and plot generation code are hosted in the following public repository for peer review:
+
+\begin{itemize}
+    \item \textbf{Repository Link}: \url{https://github.com/yasith-tharuka/neuromorphic-processing-stats}
+    \item \textbf{Sampling Seed}: \texttt{42} (ensures 100\% computational reproducibility)
+    \item \textbf{R Environment}: R version 4.6.1 (x86\_64-w64-mingw32)
+\end{itemize}
